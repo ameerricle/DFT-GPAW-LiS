@@ -1,0 +1,77 @@
+from ase import Atoms
+from ase.build import surface
+from ase.build import add_adsorbate, bulk, molecule, hcp0001
+from ase.io import read, write
+from gpaw import GPAW, PW
+from ase.visualize import view
+import numpy as np
+
+
+#Create a graphene slab
+graphene = bulk('C', a = 2.46)
+del graphene[[atom.z > 0 for atom in graphene]]
+#graphene.write("/Users/mehdishamekhi/Desktop/C.cif")
+view(graphene)
+slab = surface(graphene, (0,0,1), 1, vacuum=10)
+slab = slab * (4,4,1)
+#slab.symbols[9] = "Pt"
+#view(slab)
+
+# Set up GPAW calculator
+calc = GPAW(mode=PW(400),
+            xc='PBE',
+            kpts=(8, 8, 1),
+            parallel={'band': 1},
+            txt='graphene_slab.txt')
+
+slab.set_calculator(calc)
+slab.get_potential_energy()
+
+# Calculate density of states
+energies, dos = calc.get_dos()
+np.savetxt('graphene_slab_dos.dat', np.column_stack((energies, dos)))
+
+# Calculate band structure
+bs = calc.band_structure()
+#np.savetxt('graphene_slab_band.dat',np.column_stack((bs.kpts[0],bs.bands[0])))
+
+import matplotlib.pyplot as plt
+
+# Plot the density of states
+plt.plot(energies, dos)
+plt.xlabel('Energy (eV)')
+plt.ylabel('Density of states (states/eV)')
+plt.show()
+
+# Plot the band structure
+bs.plot(filename='graphene_slab_band.png', show=False)
+plt.xlabel('k-vector')
+plt.ylabel('Energy (eV)')
+plt.show()
+
+# It is worth noting that for a 4x4x1 graphene slab, the band structure will be similar to the one of a graphene sheet, but the density of states will be modified by the finite size effects.
+
+""" graphene.set_calculator(calc)
+slab = graphene.repeat((1, 1, 1))
+energy = slab.get_potential_energy()
+
+# Calculate density of states
+dos = calc.get_dos()
+
+import matplotlib.pyplot as plt
+plt.plot(dos.energies, dos.get_dos())
+plt.xlabel('Energy (eV)')
+plt.ylabel('Density of states')
+plt.show()
+
+dos.write('graphene_block_dos.dat')
+
+
+# Calculate band structure
+bs = calc.get_band_structure(reference='G')
+bs.write('graphene_block_band.dat') """
+
+
+
+
+
